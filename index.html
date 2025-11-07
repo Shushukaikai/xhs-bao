@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>小红书爆文生成器（国内 vs 美国 壁垒对比）</title>
+<style>
+  :root{
+    --bg:#fff;
+    --card:#fff;
+    --accent:#ff3b30;
+    --muted:#666;
+    --glass: rgba(0,0,0,0.04);
+    font-family: "PingFang SC","Helvetica Neue","Microsoft Yahei",Arial;
+  }
+  body{background: linear-gradient(180deg,#f7f7f9, #fff); margin:0; padding:24px; color:#111;}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+  header img{width:56px;height:56px;border-radius:12px;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+  h1{margin:0;font-size:20px}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+
+  .container{display:grid;grid-template-columns:380px 1fr;gap:18px;}
+  .panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.04)}
+  label{display:block;font-size:13px;margin-top:10px;color:#333}
+  input[type="text"], select, textarea{width:100%;padding:8px 10px;margin-top:6px;border-radius:8px;border:1px solid #e6e6e9;font-size:14px}
+  textarea{min-height:120px;resize:vertical}
+  .row{display:flex;gap:8px}
+  .btn{display:inline-block;padding:8px 12px;border-radius:10px;background:var(--accent);color:white;border:0;cursor:pointer;font-weight:600}
+  .btn.secondary{background:#fff;border:1px solid #eee;color:#222}
+  .small{font-size:12px;color:var(--muted)}
+  .output{white-space:pre-wrap;background:linear-gradient(180deg,#fff,#fbfbfb);padding:16px;border-radius:10px;border:1px solid #f0f0f2;min-height:260px;overflow:auto}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{background:var(--glass);padding:6px 8px;border-radius:999px;font-size:13px}
+  .score{font-size:22px;font-weight:700;color:#0a7; padding:6px 10px;border-radius:8px;background:rgba(10,130,80,0.08);display:inline-block}
+
+  .flex-between{display:flex;justify-content:space-between;align-items:center}
+  .file-preview{width:100%;height:160px;border-radius:10px;border:1px dashed #eee;display:flex;align-items:center;justify-content:center;color:var(--muted);overflow:hidden;background:#fafafa}
+  .hashtags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .hashtag{background:#f8f8ff;padding:6px 10px;border-radius:999px;border:1px solid #eee;font-weight:600}
+  footer{margin-top:18px;color:var(--muted);font-size:13px}
+  @media (max-width:900px){
+    .container{grid-template-columns:1fr; padding-bottom:40px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><rect width='160' height='160' rx='28' fill='%23ff3b30'/><text x='50%' y='54%' font-size='64' text-anchor='middle' fill='white' font-family='Arial' dy='.2em'>小</text></svg>" alt="logo"/>
+  <div>
+    <h1>小红书爆文生成器 — 国内 vs 美国 壁垒信息（可运行）</h1>
+    <p class="lead">自动生成对比型笔记正文、标题、标签和发布策略，支持导出 Markdown / 复制。</p>
+  </div>
+</header>
+
+<div class="container">
+  <!-- 左侧控制面板 -->
+  <div class="panel">
+    <label>主题 / 关键词（逗号分隔）</label>
+    <input id="keywords" type="text" placeholder="例如：跨境电商, 创业, 知识付费">
+
+    <label>目标读者</label>
+    <select id="audience">
+      <option value="both">国内读者 + 海外读者</option>
+      <option value="cn">国内读者（中国）</option>
+      <option value="us">美国读者 / 海外视角</option>
+    </select>
+
+    <label>内容风格</label>
+    <select id="tone">
+      <option value="dry">干货 / 专业（权威）</option>
+      <option value="warm">温暖种草（个人经历）</option>
+      <option value="sensual">情绪化 / 爆点（吸睛）</option>
+    </select>
+
+    <label>篇幅与结构</label>
+    <div class="row" style="margin-top:6px">
+      <select id="length">
+        <option value="short">短（300字左右）</option>
+        <option value="medium" selected>中（600-900字）</option>
+        <option value="long">长（1200+ 字）</option>
+      </select>
+      <button class="btn" id="generate">生成爆文 ✨</button>
+    </div>
+
+    <label class="small">选择要包含的“壁垒”类别（可多选）</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+      <label><input type="checkbox" class="barrier" value="regulation" checked/> 监管/合规</label>
+      <label><input type="checkbox" class="barrier" value="payment" checked/> 支付与结算</label>
+      <label><input type="checkbox" class="barrier" value="logistics" checked/> 物流与税务</label>
+      <label><input type="checkbox" class="barrier" value="traffic" checked/> 平台流量机制</label>
+      <label><input type="checkbox" class="barrier" value="cultural" checked/> 文化与内容偏好</label>
+      <label><input type="checkbox" class="barrier" value="ip" /> 知识产权与审查</label>
+    </div>
+
+    <label style="margin-top:10px;">封面图（可选）</label>
+    <div class="file-preview" id="imgPreview">未上传封面（可选）</div>
+    <input type="file" id="coverInput" accept="image/*" style="margin-top:8px"/>
+
+    <label class="small" style="margin-top:12px">其他：生成后可点击“复制/导出”并在小红书客户端手动发布</label>
+
+    <div style="margin-top:12px" class="flex-between">
+      <div class="small">模拟推荐概率 / 参与度评分</div>
+      <div id="scoreWrap"><span class="score" id="score">--</span></div>
+    </div>
+
+    <div style="margin-top:12px" class="meta" id="generatedTags"></div>
+
+    <div style="margin-top:12px">
+      <button class="btn secondary" id="copyBtn">复制正文</button>
+      <button class="btn secondary" id="exportMd">导出 Markdown</button>
+      <button class="btn" id="downloadJson">下载 JSON</button>
+    </div>
+  </div>
+
+  <!-- 右侧输出 -->
+  <div class="panel">
+    <div class="flex-between">
+      <div>
+        <label>生成的标题</label>
+        <input id="genTitle" type="text" placeholder="生成后自动填充（可编辑）"/>
+      </div>
+      <div style="width:220px;margin-left:12px">
+        <label>预览平台建议</label>
+        <select id="platformHint">
+          <option value="xiaohongshu">小红书（图文/长文）</option>
+          <option value="wechat">公众号 / 微信（长文）</option>
+          <option value="linkedin">LinkedIn（专业）</option>
+        </select>
+      </div>
+    </div>
+
+    <label style="margin-top:12px">生成正文预览</label>
+    <div id="output" class="output">点击“生成爆文”开始 →</div>
+
+    <label style="margin-top:12px">建议的热搜标签（点可复制）</label>
+    <div id="hotTags" class="hashtags"></div>
+
+    <label style="margin-top:12px">发布策略（简短）</label>
+    <div class="output" id="publishAdvice" style="min-height:80px">生成后显示发布建议（发布时间、封面建议、互动话术）。</div>
+  </div>
+</div>
+
+<footer>
+  Tip：本工具用于帮你快速构思和生成内容，不替代专业法律/合规咨询。请在发布前核实监管、税务等信息。
+</footer>
+
+<script>
+/* 数据与模板（可扩展） */
+const barrierTemplates = {
+  regulation: {
+    cn: [
+      "国内监管侧重于内容安全与广告合规：需要遵守网络信息内容生态治理要求、不得发布涉嫌虚假宣传或未经许可的医疗/教育类内容；商用变现时常需备案与合同凭证。",
+      "在中国，平台对于广告与带货内容审查严格，某些关键词（如“保证XXX效果”）极易被下线或限流。"
+    ],
+    us: [
+      "美国监管强调消费者保护与广告透明（FTC），对虚假宣传、未申明广告关系会采取处罚，涉医疗/金融类内容需要谨慎标注合规信息。",
+      "美国没有统一的“内容审查”机制，但平台的社区规则和广告政策（Facebook/Instagram/TikTok）会影响分发。"
+    ]
+  },
+  payment: {
+    cn: [
+      "国内支付生态以微信/支付宝为主，且与电商平台联动紧密，结算效率快；海外同样存在本地化支付接入与跨境清算成本。",
+      "人民币结算与发票规范是中国商业交易的必须项，商业合作时常需提供增值税发票。"
+    ],
+    us: [
+      "美国生态以银行卡、PayPal、Stripe 为主，跨境收款需要考虑汇率、手续费、以及美国税务与1099问题。",
+      "跨境创业者需要处理美方收款账户或第三方服务（如Payoneer）以降低提现与汇兑复杂度。"
+    ]
+  },
+  logistics: {
+    cn: [
+      "国内物流成熟、最后一公里高效；但对于细分品类（如定制、敏感货物）仍有合规限制与报关要求。",
+      "电商平台在退货与售后上有明确规则，要注意运费、退货率对店铺权重的影响。"
+    ],
+    us: [
+      "美国地广人稀导致“最后一公里”成本高，物流时效与退货成本是运营难点，FBA等第三方仓储便利但成本较高。",
+      "跨境进口需要关税与申报，清关延迟会显著影响用户体验。"
+    ]
+  },
+  traffic: {
+    cn: [
+      "国内平台（小红书/抖音/快手）各有流量规则：小红书偏好图文长笔记与真实体验，笔记结构化、插入高质量图片更易触发推荐。",
+      "国内平台对新账号与新内容会有冷启动机制，种草帖子常见“前两小时互动决定能否破圈”的说法。"
+    ],
+    us: [
+      "美国社交平台的推荐侧重于兴趣图谱与长期用户画像；短视频热度传播快但生命周期短，社区属性差别大（Reddit/IG/Twitter/LinkedIn）。",
+      "想要触达美国用户，内容风格与价值诉求需要调整（直白、数据+案例、保守的夸张程度）。"
+    ]
+  },
+  cultural: {
+    cn: [
+      "中文读者更偏好“真人体验 + 明确消费建议”，情绪化的个人叙述常能产生共鸣。",
+      "在国内，带图、带明细（价格/购买链接/折扣码）更易获得转化。"
+    ],
+    us: [
+      "美国用户更注重事实、透明和来源（source），以及隐私友好型的表达；过度情绪化或模糊数据反而降低信任感。",
+      "文化差异也体现在内容节奏（直接 vs 铺垫）与视觉偏好（极简 vs 情感化）。"
+    ]
+  },
+  ip: {
+    cn: [
+      "国内版权保护在不断加强，但仍需注意平台对侵权内容的自动下架机制与投诉流程。",
+      "涉及品牌/音乐/影视片段时，尽量使用可商用素材或平台授权素材。"
+    ],
+    us: [
+      "美国的版权保护体系成熟，DMCA 与版权声明机制会影响平台处理速度；商用使用音乐/图片需要明确许可。",
+      "品牌口碑与法律诉讼风险在美国可能造成更大损失，尤其涉商用变现行为。"
+    ]
+  }
+};
+
+/* 生成器逻辑 */
+function getSelectedBarriers(){
+  return Array.from(document.querySelectorAll('.barrier:checked')).map(i=>i.value);
+}
+
+function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+/* 主生成函数 */
+function generateContent(){
+  const kwsRaw = document.getElementById('keywords').value.trim();
+  const keywords = kwsRaw ? kwsRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  const audience = document.getElementById('audience').value;
+  const tone = document.getElementById('tone').value;
+  const length = document.getElementById('length').value;
+  const platform = document.getElementById('platformHint').value;
+  const barriers = getSelectedBarriers();
+  const includeCN = (audience==='cn' || audience==='both');
+  const includeUS = (audience==='us' || audience==='both');
+
+  // Title generation
+  let titleParts = [];
+  if(keywords.length>0) titleParts.push(keywords.slice(0,2).join('·'));
+  if(includeCN && includeUS) titleParts.push("国内 VS 美国 | 实操对比");
+  else if(includeCN) titleParts.push("国内实情与避坑");
+  else titleParts.push("美国视角的壁垒与建议");
+  let title = `${titleParts.join(' — ')} | 我总结的 7 个关键点`;
+  document.getElementById('genTitle').value = title;
+
+  // Build paragraphs
+  let paragraphs = [];
+  // 开头钩子（吸睛）
+  if(tone==='sensual'){
+    paragraphs.push("刚从两个市场的第一线回来，太多坑要避。今天把我实操过的“国内 vs 美国”的壁垒一条条拆给你，长点字，但非常值。");
+  }else if(tone==='warm'){
+    paragraphs.push("作为在两边试水过的人，我把那些常被忽视但会让你翻车的问题整理成清单，给你真实的建议。");
+  }else{
+    paragraphs.push("本文整理了国内与美国市场的主要壁垒与应对策略，适合想做跨境/海外业务或内容运营的人快速参考。");
+  }
+
+  // Add barrier-specific bullets
+  const maxBullets = (length==='short')?3:(length==='medium')?5:8;
+  let bullets = [];
+  for(let b of barriers){
+    if(b in barrierTemplates){
+      if(includeCN) bullets.push(pickRandom(barrierTemplates[b].cn));
+      if(includeUS) bullets.push(pickRandom(barrierTemplates[b].us));
+    }
+    if(bullets.length>=maxBullets) break;
+  }
+  // If no barriers selected, default to traffic/regulation
+  if(bullets.length===0){
+    bullets.push(pickRandom(barrierTemplates.traffic.cn || []));
+    bullets.push(pickRandom(barrierTemplates.regulation.us || []));
+  }
+
+  // Insert bullets as paragraphs
+  for(let i=0;i<bullets.length;i++){
+    paragraphs.push("• " + bullets[i]);
+  }
+
+  // Practical tips
+  let tips = [];
+  if(includeCN) tips.push("国内实操建议：提前准备完整的合同与发票，素材用平台授权图片，标题/封面保持生活化并列出关键参数（价格/渠道/时间）。");
+  if(includeUS) tips.push("美国实操建议：注重声明广告关系、提供数据与来源、优先使用合规支付接入（Stripe/PayPal），考虑本地仓储降低退货成本。");
+  tips.push("跨境关键：尽早规划结算（本地账户或第三方）、把合规咨询放在商业计划里，物流与税费成本要在首轮预算中体现。");
+  if(tone!=='dry'){
+    tips.push("互动话术：发布后首小时内留言引导（例如“私信我想要模板”/“评论你最关心的国家”），能显著提升算法推荐概率。");
+  }
+
+  paragraphs.push("");
+  paragraphs.push("实操建议：");
+  for(let t of tips) paragraphs.push("• "+t);
+
+  // Closing CTA
+  if(tone==='warm'){
+    paragraphs.push("");
+    paragraphs.push("如果你想，我可以把我做过的清单（包括合同样本、清关流程图、结算模板）打包成笔记，留言“我要清单”我发给你。");
+  } else {
+    paragraphs.push("");
+    paragraphs.push("结论：了解差异、准备合规与结算、优化首小时互动，是两个市场都能成功的关键。需要我把某一点展开吗？留言告诉我。");
+  }
+
+  // Build final content
+  let content = paragraphs.join("\n\n");
+
+  // Generate tags
+  const basicTags = ["跨境电商","创业干货","实操","避坑","海外布局","流量运营"];
+  const extra = keywords.slice(0,4).map(k=>k.replace(/\s+/g,''));
+  const tags = Array.from(new Set([...extra, ...basicTags])).slice(0,12);
+
+  // Simulate score (simple heuristic)
+  let score = simulateScore(content, tags, audience);
+
+  // Produce publish advice
+  const publishAdvice = makePublishAdvice(platform, tone, includeCN, includeUS);
+
+  // Render out
+  document.getElementById('output').textContent = content;
+  renderTags(tags);
+  document.getElementById('score').textContent = score.toFixed(0) + "%";
+  document.getElementById('publishAdvice').textContent = publishAdvice;
+
+  // store last generated state for export
+  window.__lastGenerated = {
+    title,
+    content,
+    tags,
+    score,
+    meta:{audience,tone,length,platform,keywords}
+  };
+}
+
+/* render tags area */
+function renderTags(tags){
+  const wrap = document.getElementById('hotTags');
+  wrap.innerHTML = '';
+  tags.forEach(t=>{
+    const el = document.createElement('div');
+    el.className = "hashtag";
+    el.textContent = "#"+t;
+    el.title = "点我复制";
+    el.onclick = ()=>{navigator.clipboard.writeText("#"+t);}
+    wrap.appendChild(el);
+  });
+  // meta chips
+  const metaWrap = document.getElementById('generatedTags');
+  metaWrap.innerHTML = '';
+  tags.slice(0,6).forEach(t=>{
+    const c = document.createElement('div');
+    c.className = 'chip';
+    c.textContent = '#'+t;
+    metaWrap.appendChild(c);
+  });
+}
+
+/* 简单评分函数（启发式） */
+function simulateScore(text, tags, audience){
+  let score = 40;
+  // length contribution
+  const len = text.length;
+  if(len>800) score += 20;
+  else if(len>400) score += 12;
+  else score += 6;
+  // tags
+  score += Math.min(20, tags.length*3);
+  // audience factor (both is better for reach but risk of dilution)
+  if(audience==='both') score += 6;
+  // presence of "实操" or "清单" words
+  if(/清单|实操|模板|合同/.test(text)) score += 8;
+  // if many bullets (good for阅读)
+  const bullets = (text.match(/•/g) || []).length;
+  score += Math.min(10, bullets*2);
+  // clamp
+  score = Math.max(25, Math.min(95, score));
+  return score;
+}
+
+/* 发布建议生成 */
+function makePublishAdvice(platform, tone, includeCN, includeUS){
+  let advice = [];
+  if(platform==='xiaohongshu'){
+    advice.push("发布时间：周一/周四 早上 7:30 或 晚上 20:00（小红书用户活跃时段）。");
+    advice.push("封面建议：高对比人像 + 1 条醒目文本（3-6字），图片左上或左下留白用于文字。");
+    advice.push("互动话术：首小时发两条评论（置顶）、并私信 3 位同行请他们真实点赞+评论（注意合规）。");
+    if(tone!=='dry') advice.push("笔记结构：第一段钩子（30字内）→ 主干 4-6 条实操点 → 结尾 CTA（问答/资源）。");
+  } else if(platform==='wechat'){
+    advice.push("发布时间：工作日午休或晚上；正文可更长，插入目录与小标题提升阅读。");
+    advice.push("配图：流程图/数据图 + 案例截屏。");
+  } else {
+    advice.push("LinkedIn 更偏职业与数据驱动：使用数据或案例开头，避免过度情绪化。");
+    advice.push("配图：图表或实操截图， CTA 指向领英私信或公司页面。");
+  }
+  if(includeCN && includeUS) advice.push("同时面向两地：建议分别做一条针对性二次编辑（1）中文长笔记（更生活化），（2）英文版或中英对照（更专业化）。");
+  return advice.join("\n\n");
+}
+
+/* Export & copy handlers */
+document.getElementById('generate').addEventListener('click', generateContent);
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  if(!window.__lastGenerated) return alert("请先生成内容");
+  const title = document.getElementById('genTitle').value || window.__lastGenerated.title;
+  const text = `# ${title}\n\n` + window.__lastGenerated.content + "\n\n" + window.__lastGenerated.tags.map(t=>"#"+t).join(" ");
+  navigator.clipboard.writeText(text).then(()=>alert("已复制到剪贴板，打开小红书粘贴即可"));
+});
+
+document.getElementById('exportMd').addEventListener('click', ()=>{
+  if(!window.__lastGenerated) return alert("请先生成内容");
+  const title = document.getElementById('genTitle').value || window.__lastGenerated.title;
+  const md = `---\ntitle: ${title}\n---\n\n` + window.__lastGenerated.content + "\n\n" + window.__lastGenerated.tags.map(t=>"#"+t).join(" ");
+  const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (title.replace(/\s+/g,'_')||'note') + ".md";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('downloadJson').addEventListener('click', ()=>{
+  if(!window.__lastGenerated) return alert("请先生成内容");
+  const data = JSON.stringify(window.__lastGenerated, null, 2);
+  const blob = new Blob([data], {type:'application/json;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = "xiaohongshu_generated.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+/* image preview */
+document.getElementById('coverInput').addEventListener('change', (ev)=>{
+  const f = ev.target.files && ev.target.files[0];
+  const p = document.getElementById('imgPreview');
+  if(!f){ p.innerHTML = '未上传封面（可选）'; return; }
+  const fr = new FileReader();
+  fr.onload = ()=> {
+    p.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = fr.result;
+    img.style.maxWidth='100%'; img.style.maxHeight='100%'; img.style.objectFit='cover';
+    p.appendChild(img);
+  };
+  fr.readAsDataURL(f);
+});
+
+/* init with an example */
+document.getElementById('keywords').value = "跨境电商, 内容运营, 合规";
+generateContent();
+</script>
+</body>
+</html>
